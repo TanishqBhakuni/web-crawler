@@ -1,3 +1,6 @@
 [submodule "external/cpr"]
 	path = external/cpr
 	url = https://github.com/libcpr/cpr.git
+[submodule "external/gumbo-parser"]
+	path = external/gumbo-parser
+	url = https://github.com/google/gumbo-parser.git
