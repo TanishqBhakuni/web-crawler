@@ -3,7 +3,7 @@
 
 int main() {
 
-    std::string target_url = "https://example.com";
+    std::string target_url = "https://books.toscrape.com/";
     std::cout << "Attempting to fetch URL: " << target_url << std::endl;
 
     cpr::Response response = cpr::Get(cpr::Url{target_url});

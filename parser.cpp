@@ -61,27 +61,34 @@ static std::string normalize_url(const std::string& url, const std::string& base
 }
 
 static void search_for_links(GumboNode* node, std::vector<std::string>& links, const std::string& base_url){
+    // 1. Base Case & Filtering: We only care about element nodes.
     if (node -> type != GUMBO_NODE_ELEMENT){
         return;
     }
 
     GumboElement& element = node->v.element;
 
+    //2. Identification: Is this an anchor tag ?
     if (element.tag == GUMBO_TAG_A){
         
+        //3. Extraction: Get the href attribute.
         GumboAttribute* href_attr = gumbo_get_attribute(&element.attributes, "href");
-
+        //Check if the href attribute exists.        
         if(href_attr){
             std::string raw_href = href_attr -> value;
 
+            //4. Normalization: Convert to absolute URL.
             std::string normalized = normalize_url(raw_href, base_url);
 
+            //Storage: If the URL is valid, add it to our results vector.
             if(!normalized.empty()){
                 links.push_back(normalized);
             }
         }
     }
-
+    
+    // 6. Traversal: Continue the search into the element's children,
+    // passing the shared 'links' vector and 'base_url' context along.
     for(unsigned int i=0; i<element.children.length; ++i){
         search_for_links(static_cast<GumboNode*>(element.children.data[i]), links, base_url);
     }
