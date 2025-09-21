@@ -9,6 +9,16 @@ static void search_for_links(GumboNode* node, std::vector<std::string>& links){
 
     GumboElement& element = node->v.element;
 
+    if (element.tag == GUMBO_TAG_A){
+        
+        GumboAttribute* href_attr = gumbo_get_attribute(&element.attributes, "href");
+
+        if(href_attr){
+            std::string href_value = href_attr -> value;
+            std::cout<< "Found a link to: " << href_value << std::endl;
+        }
+    }
+
     for(unsigned int i=0; i<element.children.length; ++i){
         search_for_links(static_cast<GumboNode*>(element.children.data[i]), links);
     }
