@@ -1,12 +1,14 @@
 #include "parser.hpp"
-#include<iostream>
-#include<gumbo.h>
-#include<vector>
-#include<string>
+#include <iostream>
+#include <cstdlib>
+#include <cstring>
+#include <gumbo.h>
+#include <vector>
+#include <string>
 
-static std::string normalize_url(const std::string& url, const std::string& base_url){
+static std::string normalize_url(const std::string& href, const std::string& base_url){
     //1. Basic validation and filtering
-    if(href.empty() || href.find("mailto: ") == 0 || href.find("javascript: ") == 0 || href.find("tel:") == 0){
+    if(href.empty() || href.find("mailto:") == 0 || href.find("javascript:") == 0 || href.find("tel:") == 0){
         return "";
     }
 
@@ -24,7 +26,10 @@ static std::string normalize_url(const std::string& url, const std::string& base
     }
 
      //Then find the first '/' after the scheme to get the domain. 
-     size_t domain_start_pos = base_url.find('/', scheme_end_pos + 3);
+     size_t domain_end_pos = base_url.find('/', scheme_end_pos + 3);
+     if(domain_end_pos == std::string::npos){
+        domain_end_pos = base_url.length();
+    }
      std::string base_scheme = base_url.substr(0, scheme_end_pos);
      std::string base_domain = base_url.substr(0, domain_end_pos);
 
@@ -61,8 +66,8 @@ static std::string normalize_url(const std::string& url, const std::string& base
 }
 
 static void search_for_links(GumboNode* node, std::vector<std::string>& links, const std::string& base_url){
-    // 1. Base Case & Filtering: We only care about element nodes.
-    if (node -> type != GUMBO_NODE_ELEMENT){
+    // 1. Base Case & Filtering: Check for null node and element nodes only.
+    if (node == nullptr || node->type != GUMBO_NODE_ELEMENT){
         return;
     }
 
@@ -86,27 +91,31 @@ static void search_for_links(GumboNode* node, std::vector<std::string>& links, c
             }
         }
     }
-    
+
     // 6. Traversal: Continue the search into the element's children,
     // passing the shared 'links' vector and 'base_url' context along.
     for(unsigned int i=0; i<element.children.length; ++i){
-        search_for_links(static_cast<GumboNode*>(element.children.data[i]), links, base_url);
+        GumboNode* child = static_cast<GumboNode*>(element.children.data[i]);
+        if (child != nullptr) {
+            search_for_links(child, links, base_url);
+        }
     }
 }
 
 std::vector<std::string> find_links(const std::string& html_body, const std::string& base_url){
+    // 1. ACQUIRE a resource from the C library. Memory is allocated on the heap.
     GumboOutput* output = gumbo_parse(html_body.c_str());
 
-    if(output -> status != GUMBO_STATUS_OK){
+    if(output == nullptr){
         std::cerr << "Error: Failed to parse HTML" << std::endl;
-        gumbo_destroy_output(&kGumboDefaultOptions, output);
         return {};
     }
 
     std::vector<std::string> links;
-    search_for_links(output -> root, links, base_url);
-
-    std::cout<<"HTML parsing successful. Root node type: " << output -> root -> type << std::endl;
+    if(output->root != nullptr) {
+        search_for_links(output->root, links, base_url);
+        std::cout<<"HTML parsing successful. Root node type: " << output->root->type << std::endl;
+    }
 
     gumbo_destroy_output(&kGumboDefaultOptions, output);
     return links;

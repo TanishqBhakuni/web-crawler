@@ -13,19 +13,8 @@ set(CPR_BUILD_TESTS OFF)
 add_subdirectory(external/cpr)
 
 
-# Add Gumbo parser using FetchContent
-include(FetchContent)
-
-FetchContent_Declare(
-    gumbo
-    GIT_REPOSITORY https://github.com/google/gumbo-parser.git
-    GIT_TAG v0.10.1
-)
-
-# Disable building Gumbo's tests to reduce compilation time
-set(GUMBO_BUILD_TESTS OFF CACHE BOOL "Build Gumbo tests" FORCE)
-
-FetchContent_MakeAvailable(gumbo)
+# Add Gumbo parser from local directory
+add_subdirectory(external/gumbo-parser)
 
 # This command defines our main executable target, 'crawler', which is built
 # from the 'main.cpp' source file.
