@@ -3,6 +3,7 @@
 #include <string>
 #include <queue>
 #include <unordered_set>
+#include <utility>
 
 
 class Crawler{
@@ -13,8 +14,8 @@ class Crawler{
     void start(const std::string& seed_url, int max_depth);
 
     private:
-    std::queue<std::string> urls_to_visit;
-    std::unordered_set<std::string> urls_visited;
+    std::queue< std::pair <std::string, int >> urls_to_visit;
+    std::unordered_set <std::string> urls_visited;
 
 
 };

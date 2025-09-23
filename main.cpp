@@ -6,13 +6,15 @@
 
 int main() {
 
-    std::cout << "--- Main application starting ---" << std::endl;
+    std::cout << "--- C++ Web Crawler Starting ---" << std::endl;
 
-    Crawler my_crawler;
+    Crawler crawler;
+    
+    const std::string seed_url = "https://example.com";
+    const int max_depth = 1;
 
-    my_crawler.start("https://www.google.com", 2);
-
-    std::cout << "--- Main application finishing ---" << std::endl;
-
+    crawler.start(seed_url, max_depth);
+    
+    std::cout << "--- C++ Web Crawler Finished ---" << std::endl;
     return 0;
 }
