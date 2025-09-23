@@ -18,7 +18,7 @@ add_subdirectory(external/gumbo-parser)
 
 # This command defines our main executable target, 'crawler', which is built
 # from the 'main.cpp' source file.
-add_executable(crawler main.cpp parser.cpp)
+add_executable(crawler main.cpp parser.cpp crawler.cpp)
 
 # This is the crucial linking step. We are now adding 'gumbo' to the list of
 # libraries that our 'crawler' target depends on.
