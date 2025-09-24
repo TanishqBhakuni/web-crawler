@@ -1,0 +1,5 @@
+#ifndef THREAD_SAFE_STRUCTURES_HPP
+#define THREAD_SAFE_STRUCTURES_HPP
+
+
+#endif 
