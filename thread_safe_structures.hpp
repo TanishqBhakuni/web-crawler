@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <utility>
+#include <unordered_set>
 
 template <typename T>
 class ThreadSafeQueue{
@@ -53,6 +54,28 @@ class ThreadSafeQueue{
     data_queue.pop();
     
     return value;
+};
+
+template <typename T>
+class ThreadSafeSet {
+    public:
+    bool add(const T& item){
+        std::lock_guard<std::mutex> lk(mtx);
+        auto result = data_set.insert(item);
+        
+        return result.second;
+    }
+
+    bool contains(const T& item) const{
+        std::lock_guard<std::mutex> lk(mtx);
+
+        return data_set.count(item) > 0;
+    }
+    
+    private:
+    mutable std::mutex mtx;
+    std::unordered_set<T> data_set;
+
 };
 
 #endif 
