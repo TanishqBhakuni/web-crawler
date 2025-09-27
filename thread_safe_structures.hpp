@@ -8,10 +8,12 @@
 #include <unordered_set>
 
 template <typename T>
-class ThreadSafeQueue{
-    public:
-    void push(T new_value){
-        
+class ThreadSafeQueue
+{
+public:
+    void push(T new_value)
+    {
+
         // We use std::lock_guard, a powerful C++ RAII-style mechanism.
         // When 'lk' is created, it automatically calls mtx.lock().
         // This is the start of our "critical section". Only the thread that
@@ -40,9 +42,11 @@ class ThreadSafeQueue{
         cv.notify_one();
     }
 
-    T wait_and_pop(){
+    T wait_and_pop()
+    {
         std::unique_lock<std::mutex> lk(mtx);
-        cv.wait(lk, [this]{ return !this->data_queue.empty(); });
+        cv.wait(lk, [this]
+                { return !this->data_queue.empty(); });
 
         // Move the front element out, pop it from the queue, and return it.
         T value = std::move(data_queue.front());
@@ -50,53 +54,58 @@ class ThreadSafeQueue{
         return value;
     }
 
-    bool empty() const{
+    bool empty() const
+    {
         std::lock_guard<std::mutex> lk(mtx);
         return data_queue.empty();
     }
 
-    size_t size() const{
+    size_t size() const
+    {
         std::lock_guard<std::mutex> lk(mtx);
         return data_queue.size();
     }
 
-    private:
+private:
     mutable std::mutex mtx;
     std::queue<T> data_queue;
     std::condition_variable cv;
-    
 };
 
 template <typename T>
-class ThreadSafeSet {
-    public:
-    bool add(const T& item){
+class ThreadSafeSet
+{
+public:
+    bool add(const T &item)
+    {
         std::lock_guard<std::mutex> lk(mtx);
         auto result = data_set.insert(item);
-        
+
         return result.second;
     }
 
-    bool contains(const T& item) const{
+    bool contains(const T &item) const
+    {
         std::lock_guard<std::mutex> lk(mtx);
 
         return data_set.count(item) > 0;
     }
 
-    size_t size() const{
+    size_t size() const
+    {
         std::lock_guard<std::mutex> lk(mtx);
         return data_set.size();
     }
-    
-    size_t count(const T& item) const{
+
+    size_t count(const T &item) const
+    {
         std::lock_guard<std::mutex> lk(mtx);
         return data_set.count(item);
     }
-    
-    private:
+
+private:
     mutable std::mutex mtx;
     std::unordered_set<T> data_set;
-
 };
 
-#endif 
+#endif
