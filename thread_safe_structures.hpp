@@ -39,10 +39,20 @@ class ThreadSafeQueue{
         cv.notify_one();
     }
 
+    T wait_and_pop(){
+        std::unique_lock<std::mutex> lk(mtx);
+        cv.wait(lk, [this]{ return !this->data_queue.empty(); });
+    }
+
     private:
     mutable std::mutex mtx;
     std::queue<T> data_queue;
     std::condition_variable cv;
+    
+    T value = std::move(data_queue.front());
+    data_queue.pop();
+    
+    return value;
 };
 
 #endif 
