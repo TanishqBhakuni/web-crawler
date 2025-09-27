@@ -1,5 +1,5 @@
 #include<iostream>
-#include"crawler.hpp"
+#include "crawler.hpp"
 #include <cpr/cpr.h>
 #include "parser.hpp"
 
@@ -18,19 +18,17 @@ void Crawler::start(const std::string& seed_url, int max_depth){
     urls_to_visit.push({seed_url, 0});
 
     while (!urls_to_visit.empty()){
-        
-        auto current_item = urls_to_visit.front();
-        urls_to_visit.pop();
-        
-        // Extract the URL and its depth from the pair.
+        auto current_item = urls_to_visit.wait_and_pop();
+
         std::string current_url = current_item.first;
         int current_depth = current_item.second;
-        
-        if(urls_visited.count(current_url)){
-            std::cout<<"Already visited" << current_url << "Skipping !" << std::endl;
+
+        // add() returns true if the item was inserted (i.e. it was NOT visited before)
+        bool was_inserted = urls_visited.add(current_url);
+        if(!was_inserted){
+            std::cout<<"Already visited " << current_url << ". Skipping !" << std::endl;
             continue;
         }
-        urls_visited.insert(current_url);
         std::cout << "Processing (depth " << current_depth << "): " << std::endl;
 
         cpr::Response response = cpr::Get(cpr::Url{current_url});

@@ -43,6 +43,21 @@ class ThreadSafeQueue{
     T wait_and_pop(){
         std::unique_lock<std::mutex> lk(mtx);
         cv.wait(lk, [this]{ return !this->data_queue.empty(); });
+
+        // Move the front element out, pop it from the queue, and return it.
+        T value = std::move(data_queue.front());
+        data_queue.pop();
+        return value;
+    }
+
+    bool empty() const{
+        std::lock_guard<std::mutex> lk(mtx);
+        return data_queue.empty();
+    }
+
+    size_t size() const{
+        std::lock_guard<std::mutex> lk(mtx);
+        return data_queue.size();
     }
 
     private:
@@ -50,10 +65,6 @@ class ThreadSafeQueue{
     std::queue<T> data_queue;
     std::condition_variable cv;
     
-    T value = std::move(data_queue.front());
-    data_queue.pop();
-    
-    return value;
 };
 
 template <typename T>
@@ -70,6 +81,16 @@ class ThreadSafeSet {
         std::lock_guard<std::mutex> lk(mtx);
 
         return data_set.count(item) > 0;
+    }
+
+    size_t size() const{
+        std::lock_guard<std::mutex> lk(mtx);
+        return data_set.size();
+    }
+    
+    size_t count(const T& item) const{
+        std::lock_guard<std::mutex> lk(mtx);
+        return data_set.count(item);
     }
     
     private:
