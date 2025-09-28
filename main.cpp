@@ -5,20 +5,20 @@
 
 #include "cxxopts/cxxopts.hpp"
 #include "crawler.hpp"
+#include "url_utils.hpp"
 
 
 
 int main(int argc, char* argv[])
 {
-    cxxopts::Options options("Crawler", "A simple, multithreaded web crawler");
+    cxxopts::Options options("Crawler", "A configurable, multithreaded web crawler");
 
     options.add_options()
-       
-        ("h,help", "Print usage information")
-        ("u,url", "The seed URL to start the crawl from", cxxopts::value<std::string>())
-        ("d,depth", "The maximum depth for the crawl", cxxopts::value<int>()->default_value("2"))
-        ("t,threads", "Number of worker threads", cxxopts::value<int>()->default_value(std::to_string(std::thread::hardware_concurrency())))
-        ("l,delay", "Politeness delay between requests (in ms)", cxxopts::value<int>()->default_value("1000"));
+        ("h,help", "Print this help message and exit")
+        ("u,url", "The mandatory seed URL to start the crawl from", cxxopts::value<std::string>())
+        ("d,depth", "Maximum link depth to crawl (e.g., depth 1 crawls the seed and its direct links)", cxxopts::value<int>()->default_value("2"))
+        ("t,threads", "Number of worker threads to use (defaults to hardware core count)", cxxopts::value<int>()->default_value(std::to_string(std::thread::hardware_concurrency())))
+        ("l,delay", "Sets a politeness delay between requests for each thread (in milliseconds)", cxxopts::value<int>()->default_value("1000"));
 
     auto result = options.parse(argc, argv);
 
