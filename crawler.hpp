@@ -6,6 +6,7 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <chrono>
 
 class Crawler
 {
@@ -13,7 +14,7 @@ public:
     Crawler();
     ~Crawler();
 
-    void start(const std::string &seed_url, int max_depth, int num_threads);
+    void start(const std::string &seed_url, int max_depth, int num_threads, int delay_ms);
 
 private:
     void worker();
@@ -21,10 +22,12 @@ private:
     ThreadSafeQueue<std::pair<std::string, int>> urls_to_visit;
     ThreadSafeSet<std::string> urls_visited;
     std::vector<std::thread> workers;
+    std::atomic<int> active_workers{0};
 
     int max_depth_limit;
 
-    std::atomic<int> active_workers{0};
+    std::chrono::milliseconds politeness_delay{0};
+    
 };
 
 #endif

@@ -17,15 +17,16 @@ Crawler::~Crawler()
     std::cout << "Crawler object destroyed. Crawl finished !" << std::endl;
 }
 
-void Crawler::start(const std::string &seed_url, int max_depth, int num_threads)
+void Crawler::start(const std::string &seed_url, int max_depth, int num_threads, int delay_ms)
 {
     this->max_depth_limit = max_depth;
+    this->politeness_delay = std::chrono::milliseconds(delay_ms);
     std::cout << "Starting crawl with the seed URL: " << seed_url << " and max depth " << max_depth << std::endl;
 
     urls_to_visit.push({seed_url, 0});
 
     workers.reserve(num_threads);
-    std::cout << "Launching " << num_threads << " worker threads... " << std::endl;
+    std::cout << "Launching " << num_threads << " worker threads with a " << delay_ms << "ms delay between requests... " << std::endl;
 
     for (int i = 0; i < num_threads; ++i)
     {
@@ -82,6 +83,8 @@ void Crawler::worker()
         {
             std::cout << "Thread [" << std::this_thread::get_id() << "] processing (depth " << current_depth << "): "
                       << urls_visited.size() << " visited. URL: " << current_url << std::endl;
+
+            std::this_thread::sleep_for(politeness_delay);
 
             cpr::Response response = cpr::Get(cpr::Url{current_url});
 
