@@ -1,9 +1,11 @@
 #include <iostream>
-#include "crawler.hpp"
 #include <cpr/cpr.h>
-#include "parser.hpp"
 #include <thread>
 #include <chrono>
+
+#include "crawler.hpp"
+#include "parser.hpp"
+#include "url_utils.hpp"
 
 const std::string POISON_PILL = "POISON_PILL_SHUTDOWN_SIGNAL";
 
@@ -71,45 +73,56 @@ void Crawler::worker()
 
         if (current_url == POISON_PILL)
         {
-            std::cout << "Thread [" << std::this_thread::get_id() << "] received shutdown signal. Terminating." << std::endl;
             break;
+        }
+
+        if (!urls_visited.add(current_url))
+        {
+            continue;
         }
 
         active_workers++;
 
         int current_depth = current_item.second;
 
-        if (urls_visited.add(current_url))
+        std::cout << "Thread [" << std::this_thread::get_id() << "] processing (depth " << current_depth << "): "
+                  << "URL: " << current_url << std::endl;
+
+        std::string domain = get_domain(current_url);
+        if (domain.empty())
         {
-            std::cout << "Thread [" << std::this_thread::get_id() << "] processing (depth " << current_depth << "): "
-                      << urls_visited.size() << " visited. URL: " << current_url << std::endl;
+            std::cerr << "  -> Thread [" << std::this_thread::get_id() << "] could not parse domain from URL. Skipping." << std::endl;
+            active_workers--;
+            continue;
+        }
 
-            std::this_thread::sleep_for(politeness_delay);
+        std::cout << "  -> Identified Domain: " << domain << std::endl;
 
-            cpr::Response response = cpr::Get(cpr::Url{current_url});
+        std::this_thread::sleep_for(politeness_delay);
 
-            if (response.error)
+        cpr::Response response = cpr::Get(cpr::Url{current_url});
+
+        if (response.error)
+        {
+            std::cerr << "Network error: " << response.error.message << std::endl;
+        }
+        else if (response.status_code == 200)
+        {
+            auto new_links = find_links(response.text, current_url);
+            if (current_depth < max_depth_limit)
             {
-                std::cerr << "Network error: " << response.error.message << std::endl;
-            }
-            else if (response.status_code == 200)
-            {
-                auto new_links = find_links(response.text, current_url);
-                if (current_depth < max_depth_limit)
+                for (const auto &link : new_links)
                 {
-                    for (const auto &link : new_links)
+                    if (!urls_visited.contains(link))
                     {
-                        if (!urls_visited.contains(link))
-                        {
-                            urls_to_visit.push({link, current_depth + 1});
-                        }
+                        urls_to_visit.push({link, current_depth + 1});
                     }
                 }
             }
-            else
-            {
-                std::cerr << "HTTP error: " << response.status_code << std::endl;
-            }
+        }
+        else
+        {
+            std::cerr << "HTTP error: " << response.status_code << std::endl;
         }
 
         active_workers--;

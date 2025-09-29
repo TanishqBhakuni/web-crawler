@@ -1,6 +1,8 @@
 #ifndef CRAWLER_HPP
 #define CRAWLER_HPP
 #include "thread_safe_structures.hpp"
+#include "robots_cache.hpp"
+
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,6 +29,7 @@ private:
     int max_depth_limit;
 
     std::chrono::milliseconds politeness_delay{0};
+    RobotsCache robots_rules_cache_;
     
 };
 
