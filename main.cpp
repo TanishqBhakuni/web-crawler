@@ -6,28 +6,24 @@
 #include "cxxopts/cxxopts.hpp"
 #include "crawler.hpp"
 #include "url_utils.hpp"
+#include "robots_parser.hpp"
 
-
-
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     cxxopts::Options options("Crawler", "A configurable, multithreaded web crawler");
 
-    options.add_options()
-        ("h,help", "Print this help message and exit")
-        ("u,url", "The mandatory seed URL to start the crawl from", cxxopts::value<std::string>())
-        ("d,depth", "Maximum link depth to crawl (e.g., depth 1 crawls the seed and its direct links)", cxxopts::value<int>()->default_value("2"))
-        ("t,threads", "Number of worker threads to use (defaults to hardware core count)", cxxopts::value<int>()->default_value(std::to_string(std::thread::hardware_concurrency())))
-        ("l,delay", "Sets a politeness delay between requests for each thread (in milliseconds)", cxxopts::value<int>()->default_value("1000"));
+    options.add_options()("h,help", "Print this help message and exit")("u,url", "The mandatory seed URL to start the crawl from", cxxopts::value<std::string>())("d,depth", "Maximum link depth to crawl (e.g., depth 1 crawls the seed and its direct links)", cxxopts::value<int>()->default_value("2"))("t,threads", "Number of worker threads to use (defaults to hardware core count)", cxxopts::value<int>()->default_value(std::to_string(std::thread::hardware_concurrency())))("l,delay", "Sets a politeness delay between requests for each thread (in milliseconds)", cxxopts::value<int>()->default_value("1000"));
 
     auto result = options.parse(argc, argv);
 
-    if (result.count("help")) {
+    if (result.count("help"))
+    {
         std::cout << options.help() << std::endl;
         return 0;
     }
 
-    if (result.count("url") == 0) {
+    if (result.count("url") == 0)
+    {
         std::cerr << " Error: The -url option is mandatory " << std::endl;
         std::cout << options.help() << std::endl;
         return 1;
@@ -51,7 +47,7 @@ int main(int argc, char* argv[])
     {
         crawler.start(seed_url, max_depth, num_threads, delay_ms);
     }
-    catch(const std::exception& e)
+    catch (const std::exception &e)
     {
         std::cerr << "An unexpected error occurred during the crawl. " << e.what() << std::endl;
         return 1;

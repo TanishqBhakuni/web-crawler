@@ -3,6 +3,6 @@
 
 #include <string>
 
-std::string get_domain(const std::string& url);
+std::string get_domain(const std::string &url);
 
 #endif

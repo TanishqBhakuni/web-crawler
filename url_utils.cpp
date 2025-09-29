@@ -1,8 +1,10 @@
 #include "url_utils.hpp"
 
-std::string get_domain(const std::string& url){
+std::string get_domain(const std::string &url)
+{
     const size_t protocol_end_pos = url.find("://");
-    if(protocol_end_pos == std::string::npos){
+    if (protocol_end_pos == std::string::npos)
+    {
         return " ";
     }
 
@@ -10,7 +12,8 @@ std::string get_domain(const std::string& url){
 
     size_t domain_end_pos = url.find('/', domain_start_pos);
 
-    if(domain_end_pos == std::string::npos){
+    if (domain_end_pos == std::string::npos)
+    {
         return url;
     }
 
