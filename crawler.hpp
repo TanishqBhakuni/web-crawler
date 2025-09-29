@@ -19,6 +19,8 @@ public:
     ~Crawler();
 
     void start(const std::string &seed_url, int max_depth, int num_threads, int delay_ms);
+    // Print a short crawl summary (for end-of-run reporting)
+    void print_stats() const;
 
 private:
     void worker();
@@ -37,10 +39,10 @@ private:
     std::atomic<int> links_found_{0};
     std::atomic<int> http_errors_{0};
 
+    // Output and timing for showcase/reporting
     std::ofstream output_file_;
     std::mutex file_writer_mutex_;
-
-    std::chrono::time_point<std::chrono::high_resolution_clock> start_time_;
+    std::chrono::high_resolution_clock::time_point start_time_{};
     
 };
 

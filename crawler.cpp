@@ -2,6 +2,8 @@
 #include <cpr/cpr.h>
 #include <thread>
 #include <chrono>
+#include <iomanip>
+#include <stdexcept>
 
 #include "crawler.hpp"
 #include "parser.hpp"
@@ -11,12 +13,7 @@
 const std::string POISON_PILL = "POISON_PILL_SHUTDOWN_SIGNAL";
 
 Crawler::Crawler()
-    :output_file_("results.txt")
 {
-    if (!output_file_.is_open()) {
-        throw std::runtime_error("Fatal: Could not open results.txt for writing.");
-    }
-
     std::cout << "Crawler object created. Ready to crawl !" << std::endl;
 }
 
@@ -30,6 +27,12 @@ void Crawler::start(const std::string &seed_url, int max_depth, int num_threads,
     this->max_depth_limit = max_depth;
     this->politeness_delay = std::chrono::milliseconds(delay_ms);
     this->start_time_ = std::chrono::high_resolution_clock::now();
+    if (!output_file_.is_open()) {
+        output_file_.open("results.txt", std::ios::out | std::ios::trunc);
+        if (!output_file_.is_open()) {
+            std::cerr << "Warning: Unable to open results.txt for writing. URLs will not be saved to file." << std::endl;
+        }
+    }
     std::cout << "Starting crawl with the seed URL: " << seed_url << " and max depth " << max_depth << std::endl;
 
     urls_to_visit.push({seed_url, 0});
@@ -84,8 +87,15 @@ void Crawler::start(const std::string &seed_url, int max_depth, int num_threads,
     std::cout << "Links Found:      " << links_found_count << std::endl;
     std::cout << "HTTP Errors:      " << http_errors_count << std::endl;
     std::cout << "----------------------------------------" << std::endl;
-    std::cout << "Results saved to: results.txt" << std::endl;
-    std::cout << "----------------------------------------" << std::endl;
+    print_stats(); // Call the print_stats function after crawl completes
+}
+
+void Crawler::print_stats() const
+{
+    std::cout << "\n=== Crawl Stats ===" << std::endl;
+    std::cout << "Pages crawled: " << pages_crawled_.load() << std::endl;
+    std::cout << "Links discovered: " << links_found_.load() << std::endl;
+    std::cout << "HTTP errors: " << http_errors_.load() << std::endl;
 }
 
 void Crawler::worker()
@@ -129,7 +139,8 @@ void Crawler::worker()
 
             std::string robots_txt_url = domain + "/robots.txt";
 
-            cpr::Response robots_resp = cpr::Get(cpr::Url{robots_txt_url});
+            static const cpr::Header kDefaultHeaders{{"User-Agent", "CppWebCrawler/1.0"}};
+            cpr::Response robots_resp = cpr::Get(cpr::Url{robots_txt_url}, kDefaultHeaders);
 
             RobotsRules new_rules;
             if (robots_resp.status_code == 200)
@@ -165,13 +176,15 @@ void Crawler::worker()
 
         std::cout << "  -> Path '" << path << "' is ALLOWED by robots.txt. Proceeding with fetch." << std::endl;
 
-        std::this_thread::sleep_for(politeness_delay);
-        cpr::Response response = cpr::Get(cpr::Url{current_url});
+    std::this_thread::sleep_for(politeness_delay);
+    static const cpr::Header kDefaultHeaders{{"User-Agent", "CppWebCrawler/1.0"}};
+    cpr::Response response = cpr::Get(cpr::Url{current_url}, kDefaultHeaders);
 
         if (response.status_code == 200)
         {
             pages_crawled_++;
 
+            if (output_file_.is_open())
             {
                 std::lock_guard<std::mutex> guard(file_writer_mutex_);
                 output_file_ << current_url << std::endl;

@@ -5,7 +5,7 @@ std::string get_domain(const std::string &url)
     const size_t protocol_end_pos = url.find("://");
     if (protocol_end_pos == std::string::npos)
     {
-        return " ";
+        return "";
     }
 
     const size_t domain_start_pos = protocol_end_pos + 3;
@@ -14,7 +14,8 @@ std::string get_domain(const std::string &url)
 
     if (domain_end_pos == std::string::npos)
     {
-        return url;
+        // URL with no path, return scheme+host
+        return url.substr(0, url.size());
     }
 
     return url.substr(0, domain_end_pos);
