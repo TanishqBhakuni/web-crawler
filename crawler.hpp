@@ -9,6 +9,8 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <fstream>
+#include <mutex>
 
 class Crawler
 {
@@ -30,6 +32,15 @@ private:
 
     std::chrono::milliseconds politeness_delay{0};
     RobotsCache robots_rules_cache_;
+
+    std::atomic<int> pages_crawled_{0};
+    std::atomic<int> links_found_{0};
+    std::atomic<int> http_errors_{0};
+
+    std::ofstream output_file_;
+    std::mutex file_writer_mutex_;
+
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time_;
     
 };
 

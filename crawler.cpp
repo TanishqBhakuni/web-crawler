@@ -6,11 +6,17 @@
 #include "crawler.hpp"
 #include "parser.hpp"
 #include "url_utils.hpp"
+#include "robots_parser.hpp"
 
 const std::string POISON_PILL = "POISON_PILL_SHUTDOWN_SIGNAL";
 
 Crawler::Crawler()
+    :output_file_("results.txt")
 {
+    if (!output_file_.is_open()) {
+        throw std::runtime_error("Fatal: Could not open results.txt for writing.");
+    }
+
     std::cout << "Crawler object created. Ready to crawl !" << std::endl;
 }
 
@@ -23,6 +29,7 @@ void Crawler::start(const std::string &seed_url, int max_depth, int num_threads,
 {
     this->max_depth_limit = max_depth;
     this->politeness_delay = std::chrono::milliseconds(delay_ms);
+    this->start_time_ = std::chrono::high_resolution_clock::now();
     std::cout << "Starting crawl with the seed URL: " << seed_url << " and max depth " << max_depth << std::endl;
 
     urls_to_visit.push({seed_url, 0});
@@ -61,7 +68,24 @@ void Crawler::start(const std::string &seed_url, int max_depth, int num_threads,
             worker.join();
         }
     }
-    std::cout << "All worker threads have completed." << std::endl;
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - start_time_);
+
+    int pages_crawled_count = pages_crawled_.load();
+    int links_found_count = links_found_.load();
+    int http_errors_count = http_errors_.load();
+
+    std::cout << "\n----------------------------------------" << std::endl;
+    std::cout << "          Crawl Complete" << std::endl;
+    std::cout << "----------------------------------------" << std::endl;
+    std::cout << "Total Crawl Time: " << std::fixed << std::setprecision(2) << duration.count() << " seconds" << std::endl;
+    std::cout << "Pages Crawled:    " << pages_crawled_count << std::endl;
+    std::cout << "Links Found:      " << links_found_count << std::endl;
+    std::cout << "HTTP Errors:      " << http_errors_count << std::endl;
+    std::cout << "----------------------------------------" << std::endl;
+    std::cout << "Results saved to: results.txt" << std::endl;
+    std::cout << "----------------------------------------" << std::endl;
 }
 
 void Crawler::worker()
@@ -98,17 +122,65 @@ void Crawler::worker()
 
         std::cout << "  -> Identified Domain: " << domain << std::endl;
 
-        std::this_thread::sleep_for(politeness_delay);
+        RobotsRules rules;
+        if (!robots_rules_cache_.try_get(domain, rules))
+        {
+            std::cout << "  -> No rules for '" << domain << "' in cache. Fetching robots.txt." << std::endl;
 
+            std::string robots_txt_url = domain + "/robots.txt";
+
+            cpr::Response robots_resp = cpr::Get(cpr::Url{robots_txt_url});
+
+            RobotsRules new_rules;
+            if (robots_resp.status_code == 200)
+            {
+                new_rules.parse_content(robots_resp.text);
+                std::cout << "  -> Successfully parsed robots.txt for '" << domain << "'." << std::endl;
+            }
+            else
+            {
+                std::cout << "  -> No robots.txt found for '" << domain << "' (status " << robots_resp.status_code << "). Assuming all paths are allowed." << std::endl;
+            }
+
+            robots_rules_cache_.add(domain, new_rules);
+            rules = new_rules;
+        }
+        else
+        {
+            std::cout << "  -> Found rules for '" << domain << "' in cache." << std::endl;
+        }
+
+        std::string path = current_url.substr(domain.length());
+        if (path.empty())
+        {
+            path = "/";
+        }
+
+        if (!rules.is_allowed(path))
+        {
+            std::cout << "  -> Path '" << path << "' is DISALLOWED by robots.txt. Skipping." << std::endl;
+            active_workers--;
+            continue;
+        }
+
+        std::cout << "  -> Path '" << path << "' is ALLOWED by robots.txt. Proceeding with fetch." << std::endl;
+
+        std::this_thread::sleep_for(politeness_delay);
         cpr::Response response = cpr::Get(cpr::Url{current_url});
 
-        if (response.error)
+        if (response.status_code == 200)
         {
-            std::cerr << "Network error: " << response.error.message << std::endl;
-        }
-        else if (response.status_code == 200)
-        {
-            auto new_links = find_links(response.text, current_url);
+            pages_crawled_++;
+
+            {
+                std::lock_guard<std::mutex> guard(file_writer_mutex_);
+                output_file_ << current_url << std::endl;
+            }
+
+            std::vector<std::string> new_links = find_links(response.text, current_url);
+
+            links_found_ += static_cast<int>(new_links.size());
+
             if (current_depth < max_depth_limit)
             {
                 for (const auto &link : new_links)
@@ -120,11 +192,19 @@ void Crawler::worker()
                 }
             }
         }
-        else
+        else if (!response.error)
         {
-            std::cerr << "HTTP error: " << response.status_code << std::endl;
+            std::cerr << "  -> Failed with HTTP status code: " << response.status_code
+                      << " for URL: " << current_url << std::endl;
+            http_errors_++; 
         }
 
+        if (response.error)
+        {
+            std::cerr << "  -> Network Error: " << response.error.message
+                      << " for URL: " << current_url << std::endl;
+        }
+        
         active_workers--;
     }
 }
